@@ -1,0 +1,71 @@
+package main
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+var (
+	lastLogOutMonth int
+	lastLogOutDay   int
+)
+
+func logFormatTimestamp(i any) (s string) {
+	var t time.Time
+
+	switch tt := i.(type) {
+	case string:
+		ts, err := time.ParseInLocation(time.RFC3339, tt, time.Local)
+		if err != nil {
+			return tt
+		}
+		t = ts
+	case json.Number:
+		timestamp, err := tt.Int64()
+		if err != nil {
+			return tt.String()
+		}
+		t = time.Unix(timestamp, 0)
+	default:
+		return "<nil>"
+	}
+
+	month, day := int(t.Month()), t.Day()
+	if month != lastLogOutMonth || day != lastLogOutDay {
+		s = t.Format("[01/02 15:04:05]")
+	} else {
+		s = t.Format("[15:04:05]") // 给的时间只有秒级精度
+	}
+	lastLogOutMonth, lastLogOutDay = month, day
+	return
+}
+
+func logFormatLevel(i any) string {
+	var level string
+	if ll, ok := i.(string); ok {
+		level = ll
+	} else {
+		return ""
+	}
+
+	switch level {
+	case zerolog.LevelTraceValue:
+		return "\x1b[94m[TRACE]\x1b[m"
+	case zerolog.LevelDebugValue:
+		return "\x1b[92m[DEBUG]\x1b[m"
+	case zerolog.LevelInfoValue:
+		return "\x1b[97m [INFO]\x1b[m"
+	case zerolog.LevelWarnValue:
+		return "\x1b[93m [WARN]\x1b[m"
+	case zerolog.LevelErrorValue:
+		return "\x1b[91m[ERROR]\x1b[m"
+	case zerolog.LevelFatalValue:
+		return "\x1b[91;5m[FATAL]\x1b[m"
+	case zerolog.LevelPanicValue:
+		return "\x1b[91;5;7m[PANIC]\x1b[m"
+	default:
+		return "[" + level + "]"
+	}
+}
