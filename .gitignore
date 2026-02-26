@@ -30,3 +30,6 @@ Thumbs.db
 
 # Credentials
 bilibili_identity
+
+# Temp json
+_json/

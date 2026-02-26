@@ -25,15 +25,35 @@ func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 }
 
-var loginOnly = flag.Bool("login", false, "Only perform login and exit")
+var (
+	fLoginOnly = flag.Bool("login", false,
+		"Only perform login and exit")
+	fCodecPriority = flag.String("codec", "hevc,avc,av1",
+		"Codec priority (av1/av01, hevc/h265/h.265, avc/h264/h.264)")
+	fQuality = flag.String("quality", "1080P",
+		"Maximum quality (8K, DOLBY, HDR, 4K, 1080P60, 1080P+, 1080P, 720P60, 720P, 480P, 360P, 240P)")
+)
 
 var (
 	cwg    = contextWaitGroup.New(context.Background())
 	server = http.Server{Addr: ":2233"}
 )
 
+var (
+	maxQuality    int
+	codecPriority []int
+)
+
 func init() {
 	flag.Parse()
+
+	maxQuality = parseQuality(*fQuality)
+	codecPriority = parseCodecPriority(*fCodecPriority)
+
+	log.Info().
+		Int("maxQuality", maxQuality).
+		Ints("codecPriority", codecPriority).
+		Msg("Video selection preferences loaded")
 }
 
 func main() {
@@ -50,7 +70,7 @@ func main() {
 		log.Warn().
 			Msg("Not logged in. Starting QR code login in background...")
 		fallthrough
-	case *loginOnly:
+	case *fLoginOnly:
 		cwg.Go(func(ctx context.Context) {
 			if err := qrcodeLogin(ctx); err != nil {
 				log.Error().
@@ -59,7 +79,7 @@ func main() {
 			}
 		})
 	}
-	if *loginOnly {
+	if *fLoginOnly {
 		// only perform login and exit
 		cwg.Wait()
 		return

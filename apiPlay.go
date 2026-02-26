@@ -104,7 +104,7 @@ func apiPlay(w http.ResponseWriter, r *http.Request) {
 		Str("user-agent", r.Header.Get("User-Agent")).
 		Msg("MPD request")
 
-	pageNum := 0
+	pageNum := 1
 	if p != "" {
 		var err error
 		pageNum, err = strconv.Atoi(p)
@@ -119,7 +119,6 @@ func apiPlay(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Try to get from cache first
 	var vInfo *biligo.VideoInfo
 	vInfo, cached := getCachedVideoInfo(id)
 	if !cached {
@@ -142,25 +141,17 @@ func apiPlay(w http.ResponseWriter, r *http.Request) {
 
 	pages := vInfo.Pages
 
-	if p != "" {
-		if pageNum > len(pages) || pageNum < 1 {
-			log.Warn().
-				Int("pageNum", pageNum).
-				Int("len(pages)", len(pages)).
-				Msg("Page num out of range")
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "Page num %d out of range %d", pageNum, len(pages))
-			return
-		}
-		generateSinglePeriodMpd(w, id, vInfo, pageNum-1)
+	if pageNum > len(pages) {
+		log.Warn().
+			Int("pageNum", pageNum).
+			Int("len(pages)", len(pages)).
+			Msg("Page num out of range")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Page num %d out of range %d", pageNum, len(pages))
 		return
 	}
 
-	generateMultiPeriodMpd(w, id, vInfo)
-}
-
-func generateSinglePeriodMpd(w http.ResponseWriter, id string, vInfo *biligo.VideoInfo, pageIndex int) {
-	page := vInfo.Pages[pageIndex]
+	page := vInfo.Pages[pageNum-1]
 
 	playurls, err := biligo.FetchVideoPlayurl(id, strconv.Itoa(page.Cid), biligo.VIDED_FNVAL_DASHALL)
 	if err != nil {
@@ -180,13 +171,37 @@ func generateSinglePeriodMpd(w http.ResponseWriter, id string, vInfo *biligo.Vid
 		return
 	}
 
-	var videoUrl, audioUrl string
-	for _, di := range dash.Video {
-		if di.Id == biligo.VIDEO_QN_1080 {
-			videoUrl = di.BackupUrl[0] // avoid pcdn
+	var selectedStream biligo.VideoPlayurlDashInfo
+
+LOOP:
+	for _, codecId := range codecPriority {
+		bestQuality := -1
+		for _, v := range dash.Video {
+			if v.Codecid == codecId && v.Id <= maxQuality {
+				if v.Id > bestQuality {
+					selectedStream = v
+					break LOOP
+				}
+			}
 		}
 	}
-	audioUrl = dash.Audio[0].BackupUrl[0]
+
+	if selectedStream.Id == 0 {
+		selectedStream = dash.Video[0]
+		log.Warn().
+			Int("maxQuality", maxQuality).
+			Int("available", selectedStream.Id).
+			Msg("No video <= maxQuality found, using first available")
+	}
+
+	videoUrl := selectedStream.BackupUrl[0] // avoid pcdn
+	// [TODO] audio quality selection
+	audioUrl := dash.Audio[0].BackupUrl[0]
+	log.Info().
+		Int("codecid", selectedStream.Codecid).
+		Int("quality", selectedStream.Id).
+		Str("codecs", selectedStream.Codecs).
+		Msg("Selected video stream")
 
 	title := vInfo.Title
 	if len(vInfo.Pages) > 1 && page.Part != "" {
@@ -198,79 +213,13 @@ func generateSinglePeriodMpd(w http.ResponseWriter, id string, vInfo *biligo.Vid
 		OwnerName:     vInfo.Owner.Name,
 		Bvid:          vInfo.Bvid,
 		TotalDuration: page.Duration,
-		Periods: []periodData{
-			{
-				Duration: page.Duration,
-				Width:    page.Dimension.Width,
-				Height:   page.Dimension.Height,
-				VideoURL: videoUrl,
-				AudioURL: audioUrl,
-			},
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/dash+xml")
-	w.Header().Set("Cache-Control", "public, max-age=300") // Cache for 5 minutes
-	if err := mpdTemplate.Execute(w, data); err != nil {
-		log.Error().Err(err).Msg("Failed to execute MPD template")
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
-func generateMultiPeriodMpd(w http.ResponseWriter, id string, vInfo *biligo.VideoInfo) {
-	pages := vInfo.Pages
-
-	// Calculate total duration
-	totalDuration := 0
-	for _, page := range pages {
-		totalDuration += page.Duration
-	}
-
-	// Fetch playurls for all pages
-	var periods []periodData
-	for i, page := range pages {
-		playurls, err := biligo.FetchVideoPlayurl(id, strconv.Itoa(page.Cid), biligo.VIDED_FNVAL_DASHALL)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Int("page", i+1).
-				Msg("Failed to fetch video playurl for page")
-			continue
-		}
-		dash := playurls.Dash
-		if dash == nil {
-			log.Error().
-				Int("page", i+1).
-				Msg("Failed to get dash info for page")
-			continue
-		}
-
-		var videoUrl, audioUrl string
-		for _, di := range dash.Video {
-			if di.Id == biligo.VIDEO_QN_1080 {
-				videoUrl = di.BackupUrl[0]
-				break
-			}
-		}
-		if len(dash.Audio) > 0 {
-			audioUrl = dash.Audio[0].BackupUrl[0]
-		}
-
-		periods = append(periods, periodData{
+		Periods: []periodData{{
 			Duration: page.Duration,
 			Width:    page.Dimension.Width,
 			Height:   page.Dimension.Height,
 			VideoURL: videoUrl,
 			AudioURL: audioUrl,
-		})
-	}
-
-	data := mpdData{
-		Title:         vInfo.Title,
-		OwnerName:     vInfo.Owner.Name,
-		Bvid:          vInfo.Bvid,
-		TotalDuration: totalDuration,
-		Periods:       periods,
+		}},
 	}
 
 	w.Header().Set("Content-Type", "application/dash+xml")
