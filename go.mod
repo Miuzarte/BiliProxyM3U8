@@ -3,13 +3,9 @@ module BProxy
 go 1.26
 
 require (
-	github.com/Miuzarte/biligo v0.0.0-20251227122145-cc9f58c336de
+	github.com/Miuzarte/biligo v0.0.0-20260226211050-d4d77953a5a1
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/rs/zerolog v1.34.0
-)
-
-replace (
-	github.com/Miuzarte/biligo => B:\Git\biligo
 )
 
 require (

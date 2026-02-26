@@ -1,5 +1,7 @@
 github.com/Miuzarte/biligo v0.0.0-20251227122145-cc9f58c336de h1:4ncjEaNYlzE/2Jyv7MR4gckADwybH3kjVsjiKiVzuco=
 github.com/Miuzarte/biligo v0.0.0-20251227122145-cc9f58c336de/go.mod h1:jqA2aq6Plb+jV9pD3aME3NWRzT8CDkYJ+RPkRLdolVY=
+github.com/Miuzarte/biligo v0.0.0-20260226211050-d4d77953a5a1 h1:oBZS49VXnpLhe6qtqxvfILxlejFZzw7JRnxFUwVAtyA=
+github.com/Miuzarte/biligo v0.0.0-20260226211050-d4d77953a5a1/go.mod h1:jqA2aq6Plb+jV9pD3aME3NWRzT8CDkYJ+RPkRLdolVY=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/coder/websocket v1.8.14 h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9g=
