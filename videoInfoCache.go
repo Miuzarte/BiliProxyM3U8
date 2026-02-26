@@ -9,6 +9,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+/*
+PotPlayer 播放时会使用多组不同的 Header 进行嗅探,
+做缓存以避免重复请求
+*/
+
 type cacheEntry struct {
 	data      any
 	expiresAt time.Time

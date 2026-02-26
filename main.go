@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,10 +25,30 @@ func init() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 }
 
+var loginOnly = flag.Bool("login", false, "Only perform login and exit")
+
 var (
 	cwg    = contextWaitGroup.New(context.Background())
 	server = http.Server{Addr: ":2233"}
 )
+
+func init() {
+	flag.Parse()
+
+	// If --login flag is set, only perform login and exit
+	if *loginOnly {
+		log.Info().
+			Msg("Login mode: performing login only")
+		if err := qrcodeLogin(context.Background()); err != nil {
+			log.Fatal().
+				Err(err).
+				Msg("Login failed")
+		}
+		log.Info().
+			Msg("Login completed successfully, exiting")
+		return
+	}
+}
 
 func main() {
 	stop := cwg.WithSignal(syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
@@ -37,6 +58,18 @@ func main() {
 	http.HandleFunc("GET /v1/video/{id}", apiVideo)
 	http.HandleFunc("GET /v1/play/{id}", apiPlay)
 	http.HandleFunc("GET /v1/proxy", apiProxy)
+
+	loggedIn := loadIdentity()
+	if !loggedIn {
+		log.Warn().Msg("Not logged in. Starting QR code login in background...")
+		cwg.Go(func(ctx context.Context) {
+			if err := qrcodeLogin(ctx); err != nil {
+				log.Error().
+					Err(err).
+					Msg("Background login failed")
+			}
+		})
+	}
 
 	cwg.Go(func(ctx context.Context) {
 		startCacheCleanup(ctx)
