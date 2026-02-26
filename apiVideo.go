@@ -3,10 +3,32 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"text/template"
 
 	"github.com/Miuzarte/biligo"
 	"github.com/rs/zerolog/log"
 )
+
+const M3U8_TEMPLATE = `#EXTM3U
+#PLAYLIST:{{.Title}}
+{{range .Items}}#EXTINF:{{.Duration}},{{.Title}}
+{{.URL}}
+{{end}}`
+
+var m3u8Template = template.Must(
+	template.New("m3u8").Parse(M3U8_TEMPLATE),
+)
+
+type m3u8Data struct {
+	Title string
+	Items []m3u8Item
+}
+
+type m3u8Item struct {
+	Duration int
+	Title    string
+	URL      string
+}
 
 func apiVideo(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -49,20 +71,31 @@ func apiVideo(w http.ResponseWriter, r *http.Request) {
 		scheme = "https"
 	}
 
-	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.m3u8\"", id))
-
-	fmt.Fprintf(w, "#EXTM3U\n")
-	fmt.Fprintf(w, "#PLAYLIST:%s\n", vInfo.Title)
-
+	// Build M3U8 items
+	var items []m3u8Item
 	for i, page := range pages {
 		partTitle := page.Part
 		if partTitle == "" {
 			partTitle = fmt.Sprintf("P%d", i+1)
 		}
 
-		// Use part title directly, not "Video Title - Part Title"
-		fmt.Fprintf(w, "#EXTINF:%d,%s\n", page.Duration, partTitle)
-		fmt.Fprintf(w, "%s://%s/v1/play/%s?p=%d\n", scheme, host, id, i+1)
+		items = append(items, m3u8Item{
+			Duration: page.Duration,
+			Title:    partTitle,
+			URL:      fmt.Sprintf("%s://%s/v1/play/%s?p=%d", scheme, host, id, i+1),
+		})
+	}
+
+	data := m3u8Data{
+		Title: vInfo.Title,
+		Items: items,
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.m3u8\"", id))
+
+	if err := m3u8Template.Execute(w, data); err != nil {
+		log.Error().Err(err).Msg("Failed to execute M3U8 template")
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

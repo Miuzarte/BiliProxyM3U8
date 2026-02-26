@@ -4,23 +4,23 @@ import (
 	"io"
 	"maps"
 	"net/http"
-	"net/url"
+	netUrl "net/url"
 
 	"github.com/Miuzarte/biligo"
 	"github.com/rs/zerolog/log"
 )
 
 func apiProxy(w http.ResponseWriter, r *http.Request) {
-	realURL, _ := url.QueryUnescape(r.URL.Query().Get("url"))
+	url, _ := netUrl.QueryUnescape(r.URL.Query().Get("url"))
 
 	rangeHeader := r.Header.Get("Range")
 	log.Debug().
-		Str("url", realURL).
+		Str("url", url).
 		Str("range", rangeHeader).
 		Str("user-agent", r.Header.Get("User-Agent")).
 		Msg("Proxy request")
 
-	req, _ := http.NewRequest("GET", realURL, nil)
+	req, _ := http.NewRequest("GET", url, nil)
 	for k, v := range biligo.DefaultHeaders {
 		req.Header.Set(k, v)
 	}
@@ -33,7 +33,7 @@ func apiProxy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().
 			Err(err).
-			Str("url", realURL).
+			Str("url", url).
 			Msg("Proxy request failed")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
