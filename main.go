@@ -34,20 +34,6 @@ var (
 
 func init() {
 	flag.Parse()
-
-	// If --login flag is set, only perform login and exit
-	if *loginOnly {
-		log.Info().
-			Msg("Login mode: performing login only")
-		if err := qrcodeLogin(context.Background()); err != nil {
-			log.Fatal().
-				Err(err).
-				Msg("Login failed")
-		}
-		log.Info().
-			Msg("Login completed successfully, exiting")
-		return
-	}
 }
 
 func main() {
@@ -59,9 +45,12 @@ func main() {
 	http.HandleFunc("GET /v1/play/{id}", apiPlay)
 	http.HandleFunc("GET /v1/proxy", apiProxy)
 
-	loggedIn := loadIdentity()
-	if !loggedIn {
-		log.Warn().Msg("Not logged in. Starting QR code login in background...")
+	switch {
+	case !loadIdentity():
+		log.Warn().
+			Msg("Not logged in. Starting QR code login in background...")
+		fallthrough
+	case *loginOnly:
 		cwg.Go(func(ctx context.Context) {
 			if err := qrcodeLogin(ctx); err != nil {
 				log.Error().
@@ -69,6 +58,11 @@ func main() {
 					Msg("Background login failed")
 			}
 		})
+	}
+	if *loginOnly {
+		// only perform login and exit
+		cwg.Wait()
+		return
 	}
 
 	cwg.Go(func(ctx context.Context) {

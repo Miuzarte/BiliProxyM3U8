@@ -66,11 +66,16 @@ func qrcodeLogin(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch qrcode: %w", err)
 	}
 
+	qrterminal.GenerateWithConfig(qrcodeUrl, qrterminal.Config{
+		Level:     qrterminal.L,
+		Writer:    os.Stdout,
+		BlackChar: qrterminal.BLACK,
+		WhiteChar: qrterminal.WHITE,
+		QuietZone: 1,
+		WithSixel: qrterminal.IsSixelSupported(os.Stdout),
+	})
 	log.Info().
-		Msg("Scan the QR code with Bilibili app:")
-	fmt.Println()
-	qrterminal.Generate(qrcodeUrl, qrterminal.L, os.Stdout)
-	fmt.Println()
+		Msg("Scan the QR code with Bilibili app")
 
 	for code, err := range it {
 		if err != nil {
@@ -82,6 +87,7 @@ func qrcodeLogin(ctx context.Context) error {
 				Msg("Failed to poll login status")
 			return fmt.Errorf("failed to poll login status: %w", err)
 		}
+
 		switch code {
 		case biligo.LOGIN_CODE_STATE_SUCCESS:
 			log.Info().
@@ -100,5 +106,6 @@ func qrcodeLogin(ctx context.Context) error {
 				Msg("QR code scanned, waiting for confirmation...")
 		}
 	}
+
 	return fmt.Errorf("login flow ended unexpectedly")
 }
