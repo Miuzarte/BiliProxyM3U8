@@ -41,37 +41,39 @@ func parseQuality(qualityStr string) int {
 }
 
 func parseCodecPriority(priorityStr string) []int {
-	parts := strings.Split(priorityStr, ",")
-	var codecs []int
-	seen := make(map[int]bool)
+	codecs := make([]int, 0, 3)
+	seen := map[int]struct{}{}
 
-	for _, part := range parts {
+	for part := range strings.SplitSeq(priorityStr, ",") {
 		part = strings.TrimSpace(strings.ToLower(part))
-		var codecID int
+		var codecId int
 
 		switch {
 		case strings.Contains(part, "av1") || strings.Contains(part, "av01"):
-			codecID = biligo.VIDEO_CODEC_ID_AV1
+			codecId = biligo.VIDEO_CODEC_ID_AV1
 
 		case strings.Contains(part, "hevc") || strings.Contains(part, "h265") || strings.Contains(part, "h.265"):
-			codecID = biligo.VIDEO_CODEC_ID_HEVC
+			codecId = biligo.VIDEO_CODEC_ID_HEVC
 
 		case strings.Contains(part, "avc") || strings.Contains(part, "h264") || strings.Contains(part, "h.264"):
-			codecID = biligo.VIDEO_CODEC_ID_AVC
+			codecId = biligo.VIDEO_CODEC_ID_AVC
 
 		default:
-			log.Warn().Str("codec", part).Msg("Unknown codec in priority")
+			log.Warn().
+				Str("codec", part).
+				Msg("Unknown codec in priority")
 			continue
 		}
 
-		if !seen[codecID] {
-			codecs = append(codecs, codecID)
-			seen[codecID] = true
+		if _, ok := seen[codecId]; !ok {
+			codecs = append(codecs, codecId)
+			seen[codecId] = struct{}{}
 		}
 	}
 
 	if len(codecs) == 0 {
-		log.Warn().Msg("No valid codecs in priority, using default: \"HEVC, AVC, AV1\"")
+		log.Warn().
+			Msg("No valid codecs in priority, using default: \"HEVC, AVC, AV1\"")
 		return []int{biligo.VIDEO_CODEC_ID_HEVC, biligo.VIDEO_CODEC_ID_AVC, biligo.VIDEO_CODEC_ID_AV1}
 	}
 

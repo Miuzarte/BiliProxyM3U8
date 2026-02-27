@@ -223,7 +223,8 @@ LOOP:
 	}
 
 	w.Header().Set("Content-Type", "application/dash+xml")
-	w.Header().Set("Cache-Control", "public, max-age=300") // Cache for 5 minutes
+	// Cache for 5 minutes
+	// w.Header().Set("Cache-Control", "public, max-age=300")
 	if err := mpdTemplate.Execute(w, data); err != nil {
 		log.Error().Err(err).Msg("Failed to execute MPD template")
 		w.WriteHeader(http.StatusInternalServerError)

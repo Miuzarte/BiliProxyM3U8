@@ -46,14 +46,18 @@ func saveIdentity() error {
 	id := biligo.ExportIdentity()
 	f, err := os.OpenFile(IDENTITY_FILENAME, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to open identity file for writing")
+		log.Error().
+			Err(err).
+			Msg("Failed to open identity file for writing")
 		return err
 	}
 	defer f.Close()
 
 	err = json.NewEncoder(f).Encode(id)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to encode identity")
+		log.Error().
+			Err(err).
+			Msg("Failed to encode identity")
 		return err
 	}
 	return nil
@@ -62,7 +66,9 @@ func saveIdentity() error {
 func qrcodeLogin(ctx context.Context) error {
 	qrcodeUrl, it, err := biligo.Login(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to fetch QR code")
+		log.Error().
+			Err(err).
+			Msg("Failed to fetch QR code")
 		return fmt.Errorf("failed to fetch qrcode: %w", err)
 	}
 
@@ -97,11 +103,13 @@ func qrcodeLogin(ctx context.Context) error {
 				return fmt.Errorf("failed to save identity: %w", err)
 			}
 			return nil
+
 		case biligo.LOGIN_CODE_STATE_EXPIRED:
 			log.Warn().
 				Msg("QR code expired")
 			return fmt.Errorf("qr code expired")
-		case biligo.LOGIN_CODE_STATE_SCANED:
+
+		case biligo.LOGIN_CODE_STATE_SCANNED:
 			log.Info().
 				Msg("QR code scanned, waiting for confirmation...")
 		}
