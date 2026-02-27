@@ -11,33 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type mpdData struct {
-	Title         string
-	OwnerName     string
-	Bvid          string
-	TotalDuration int
-	Periods       []periodData
-}
-
-type periodData struct {
-	Duration        int
-	VideoURL        string
-	VideoMimeType   string
-	VideoCodecs     string
-	VideoBandwidth  int
-	VideoWidth      int
-	VideoHeight     int
-	VideoFrameRate  string
-	VideoInitRange  string
-	VideoIndexRange string
-	AudioURL        string
-	AudioMimeType   string
-	AudioCodecs     string
-	AudioBandwidth  int
-	AudioInitRange  string
-	AudioIndexRange string
-}
-
 func apiPlay(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -159,12 +132,12 @@ LOOP:
 		title = fmt.Sprintf("%s - %s", vInfo.Title, page.Part)
 	}
 
-	data := mpdData{
+	data := MpdData{
 		Title:         title,
 		OwnerName:     vInfo.Owner.Name,
 		Bvid:          vInfo.Bvid,
 		TotalDuration: page.Duration,
-		Periods: []periodData{{
+		Periods: []PeriodData{{
 			Duration:        page.Duration,
 			VideoURL:        videoUrl,
 			VideoMimeType:   selectedStream.MimeType,

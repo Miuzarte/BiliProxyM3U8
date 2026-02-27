@@ -11,6 +11,33 @@ import (
 //go:embed *.tmpl
 var fs embed.FS
 
+type MpdData struct {
+	Title         string
+	OwnerName     string
+	Bvid          string
+	TotalDuration int
+	Periods       []PeriodData
+}
+
+type PeriodData struct {
+	Duration        int
+	VideoURL        string
+	VideoMimeType   string
+	VideoCodecs     string
+	VideoBandwidth  int
+	VideoWidth      int
+	VideoHeight     int
+	VideoFrameRate  string
+	VideoInitRange  string
+	VideoIndexRange string
+	AudioURL        string
+	AudioMimeType   string
+	AudioCodecs     string
+	AudioBandwidth  int
+	AudioInitRange  string
+	AudioIndexRange string
+}
+
 const MPD_TEMPLATE = `MPD.tmpl`
 
 var MpdTemplate = template.Must(
@@ -34,6 +61,17 @@ var MpdTemplate = template.Must(
 		}).
 		ParseFS(fs, MPD_TEMPLATE),
 )
+
+type M3u8Data struct {
+	Title string
+	Items []M3u8Item
+}
+
+type M3u8Item struct {
+	Duration int
+	Title    string
+	URL      string
+}
 
 const M3U8_TEMPLATE = `M3U8.tmpl`
 

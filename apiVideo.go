@@ -10,17 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type m3u8Data struct {
-	Title string
-	Items []m3u8Item
-}
-
-type m3u8Item struct {
-	Duration int
-	Title    string
-	URL      string
-}
-
 func apiVideo(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -63,21 +52,21 @@ func apiVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build M3U8 items
-	var items []m3u8Item
+	var items []M3u8Item
 	for i, page := range pages {
 		partTitle := page.Part
 		if partTitle == "" {
 			partTitle = fmt.Sprintf("P%d", i+1)
 		}
 
-		items = append(items, m3u8Item{
+		items = append(items, M3u8Item{
 			Duration: page.Duration,
 			Title:    partTitle,
 			URL:      fmt.Sprintf("%s://%s/v1/play/%s?p=%d", scheme, host, id, i+1),
 		})
 	}
 
-	data := m3u8Data{
+	data := M3u8Data{
 		Title: vInfo.Title,
 		Items: items,
 	}
