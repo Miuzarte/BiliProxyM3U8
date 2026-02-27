@@ -3,20 +3,11 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"text/template"
+
+	. "BProxy/templates"
 
 	"github.com/Miuzarte/biligo"
 	"github.com/rs/zerolog/log"
-)
-
-const M3U8_TEMPLATE = `#EXTM3U
-#PLAYLIST:{{.Title}}
-{{range .Items}}#EXTINF:{{.Duration}},{{.Title}}
-{{.URL}}
-{{end}}`
-
-var m3u8Template = template.Must(
-	template.New("m3u8").Parse(M3U8_TEMPLATE),
 )
 
 type m3u8Data struct {
@@ -94,7 +85,7 @@ func apiVideo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.m3u8\"", id))
 
-	if err := m3u8Template.Execute(w, data); err != nil {
+	if err := M3u8Template.Execute(w, data); err != nil {
 		log.Error().Err(err).Msg("Failed to execute M3U8 template")
 		w.WriteHeader(http.StatusInternalServerError)
 	}

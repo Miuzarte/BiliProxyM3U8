@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
+    type="static"
+    minBufferTime="PT1.5S"
+    mediaPresentationDuration="{{.TotalDuration | formatDuration}}"
+    profiles="urn:mpeg:dash:profile:isoff-main:2011">
+
+    <ProgramInformation>
+        <Title>{{.Title | htmlEscape}}</Title>
+        <Source>{{.OwnerName | htmlEscape}} (BV: {{.Bvid | htmlEscape}})</Source>
+        <Copyright>{{.OwnerName | htmlEscape}}</Copyright>
+    </ProgramInformation>
+{{range $i, $period := .Periods}}
+    <Period id="{{$i}}" duration="{{$period.Duration | formatDuration}}">
+        <AdaptationSet id="{{mul $i 2}}" mimeType="{{$period.VideoMimeType}}" contentType="video" segmentAlignment="true" width="{{$period.VideoWidth}}" height="{{$period.VideoHeight}}" frameRate="{{$period.VideoFrameRate}}">
+            <Representation id="{{mul $i 2}}" bandwidth="{{$period.VideoBandwidth}}" codecs="{{$period.VideoCodecs}}" width="{{$period.VideoWidth}}" height="{{$period.VideoHeight}}">
+                <BaseURL>/v1/proxy?url={{$period.VideoURL | urlEscape}}</BaseURL>
+                <SegmentBase indexRange="{{$period.VideoIndexRange}}">
+                    <Initialization range="{{$period.VideoInitRange}}"/>
+                </SegmentBase>
+            </Representation>
+        </AdaptationSet>
+
+        <AdaptationSet id="{{add (mul $i 2) 1}}" mimeType="{{$period.AudioMimeType}}" contentType="audio" segmentAlignment="true" lang="und">
+            <Representation id="{{add (mul $i 2) 1}}" bandwidth="{{$period.AudioBandwidth}}" codecs="{{$period.AudioCodecs}}">
+                <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+                <BaseURL>/v1/proxy?url={{$period.AudioURL | urlEscape}}</BaseURL>
+                <SegmentBase indexRange="{{$period.AudioIndexRange}}">
+                    <Initialization range="{{$period.AudioInitRange}}"/>
+                </SegmentBase>
+            </Representation>
+        </AdaptationSet>
+    </Period>
+{{end}}
+</MPD>

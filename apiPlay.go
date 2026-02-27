@@ -2,74 +2,13 @@ package main
 
 import (
 	"fmt"
-	"html"
 	"net/http"
-	netUrl "net/url"
 	"strconv"
-	"text/template"
+
+	. "BProxy/templates"
 
 	"github.com/Miuzarte/biligo"
 	"github.com/rs/zerolog/log"
-)
-
-const MPD_TEMPLATE = `<?xml version="1.0" encoding="UTF-8"?>
-<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 DASH-MPD.xsd"
-    type="static"
-    minBufferTime="PT1.5S"
-    mediaPresentationDuration="{{.TotalDuration | formatDuration}}"
-    profiles="urn:mpeg:dash:profile:isoff-main:2011">
-
-    <ProgramInformation>
-        <Title>{{.Title | htmlEscape}}</Title>
-        <Source>{{.OwnerName | htmlEscape}} (BV: {{.Bvid | htmlEscape}})</Source>
-        <Copyright>{{.OwnerName | htmlEscape}}</Copyright>
-    </ProgramInformation>
-{{range $i, $period := .Periods}}
-    <Period id="{{$i}}" duration="{{$period.Duration | formatDuration}}">
-        <AdaptationSet id="{{mul $i 2}}" mimeType="video/mp4" contentType="video" segmentAlignment="true" width="{{$period.Width}}" height="{{$period.Height}}" frameRate="30">
-            <Representation id="{{mul $i 2}}" bandwidth="5000000" codecs="avc1.640028" width="{{$period.Width}}" height="{{$period.Height}}">
-                <BaseURL>/v1/proxy?url={{$period.VideoURL | urlEscape}}</BaseURL>
-                <SegmentBase indexRange="0-0">
-                    <Initialization range="0-0"/>
-                </SegmentBase>
-            </Representation>
-        </AdaptationSet>
-
-        <AdaptationSet id="{{add (mul $i 2) 1}}" mimeType="audio/mp4" contentType="audio" segmentAlignment="true" lang="und">
-            <Representation id="{{add (mul $i 2) 1}}" bandwidth="128000" codecs="mp4a.40.2" audioSamplingRate="44100">
-                <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
-                <BaseURL>/v1/proxy?url={{$period.AudioURL | urlEscape}}</BaseURL>
-                <SegmentBase indexRange="0-0">
-                    <Initialization range="0-0"/>
-                </SegmentBase>
-            </Representation>
-        </AdaptationSet>
-    </Period>
-{{end}}
-</MPD>`
-
-var mpdTemplate = template.Must(
-	template.New("mpd").
-		Funcs(template.FuncMap{
-			"mul":        func(a, b int) int { return a * b },
-			"add":        func(a, b int) int { return a + b },
-			"htmlEscape": html.EscapeString,
-			"urlEscape":  netUrl.QueryEscape,
-			"formatDuration": func(seconds int) string {
-				hours := seconds / 3600
-				minutes := (seconds % 3600) / 60
-				secs := seconds % 60
-				if hours > 0 {
-					return fmt.Sprintf("PT%dH%dM%dS", hours, minutes, secs)
-				} else if minutes > 0 {
-					return fmt.Sprintf("PT%dM%dS", minutes, secs)
-				}
-				return fmt.Sprintf("PT%dS", secs)
-			},
-		}).
-		Parse(MPD_TEMPLATE),
 )
 
 type mpdData struct {
@@ -81,11 +20,22 @@ type mpdData struct {
 }
 
 type periodData struct {
-	Duration int
-	Width    int
-	Height   int
-	VideoURL string
-	AudioURL string
+	Duration        int
+	VideoURL        string
+	VideoMimeType   string
+	VideoCodecs     string
+	VideoBandwidth  int
+	VideoWidth      int
+	VideoHeight     int
+	VideoFrameRate  string
+	VideoInitRange  string
+	VideoIndexRange string
+	AudioURL        string
+	AudioMimeType   string
+	AudioCodecs     string
+	AudioBandwidth  int
+	AudioInitRange  string
+	AudioIndexRange string
 }
 
 func apiPlay(w http.ResponseWriter, r *http.Request) {
@@ -195,8 +145,9 @@ LOOP:
 	}
 
 	videoUrl := selectedStream.BackupUrl[0] // avoid pcdn
-	// [TODO] audio quality selection
-	audioUrl := dash.Audio[0].BackupUrl[0]
+	selectedAudio := dash.Audio[0]
+	audioUrl := selectedAudio.BackupUrl[0]
+
 	log.Info().
 		Int("codecid", selectedStream.Codecid).
 		Int("quality", selectedStream.Id).
@@ -214,18 +165,29 @@ LOOP:
 		Bvid:          vInfo.Bvid,
 		TotalDuration: page.Duration,
 		Periods: []periodData{{
-			Duration: page.Duration,
-			Width:    page.Dimension.Width,
-			Height:   page.Dimension.Height,
-			VideoURL: videoUrl,
-			AudioURL: audioUrl,
+			Duration:        page.Duration,
+			VideoURL:        videoUrl,
+			VideoMimeType:   selectedStream.MimeType,
+			VideoCodecs:     selectedStream.Codecs,
+			VideoBandwidth:  selectedStream.Bandwidth,
+			VideoWidth:      selectedStream.Width,
+			VideoHeight:     selectedStream.Height,
+			VideoFrameRate:  selectedStream.FrameRate,
+			VideoInitRange:  selectedStream.SegmentBase.Initialization,
+			VideoIndexRange: selectedStream.SegmentBase.IndexRange,
+			AudioURL:        audioUrl,
+			AudioMimeType:   selectedAudio.MimeType,
+			AudioCodecs:     selectedAudio.Codecs,
+			AudioBandwidth:  selectedAudio.Bandwidth,
+			AudioInitRange:  selectedAudio.SegmentBase.Initialization,
+			AudioIndexRange: selectedAudio.SegmentBase.IndexRange,
 		}},
 	}
 
 	w.Header().Set("Content-Type", "application/dash+xml")
 	// Cache for 5 minutes
 	// w.Header().Set("Cache-Control", "public, max-age=300")
-	if err := mpdTemplate.Execute(w, data); err != nil {
+	if err := MpdTemplate.Execute(w, data); err != nil {
 		log.Error().Err(err).Msg("Failed to execute MPD template")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
