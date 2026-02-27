@@ -9,7 +9,7 @@
 
     <ProgramInformation>
         <Title>{{.Title | htmlEscape}}</Title>
-        <Source>av{{.Aid | htmlEscape}} / {{.Bvid | htmlEscape}}</Source>
+        <Source>av{{.Aid}} / {{.Bvid | htmlEscape}}</Source>
         <Copyright>{{.OwnerName | htmlEscape}}</Copyright>
     </ProgramInformation>
 {{range $i, $period := .Periods}}
