@@ -13,7 +13,7 @@
         <Copyright>{{.OwnerName | htmlEscape}}</Copyright>
     </ProgramInformation>
 {{range $i, $period := .Periods}}
-    <Period id="{{$i}}" duration="{{$period.Duration | formatDuration}}">
+    <Period id="{{$i}}">
         <AdaptationSet id="{{mul $i 2}}" mimeType="{{$period.VideoMimeType}}" contentType="video" segmentAlignment="true" width="{{$period.VideoWidth}}" height="{{$period.VideoHeight}}" frameRate="{{$period.VideoFrameRate}}">
             <Representation id="{{mul $i 2}}" bandwidth="{{$period.VideoBandwidth}}" codecs="{{$period.VideoCodecs}}" width="{{$period.VideoWidth}}" height="{{$period.VideoHeight}}">
                 <BaseURL>/v1/proxy?url={{$period.VideoURL | urlEscape}}</BaseURL>

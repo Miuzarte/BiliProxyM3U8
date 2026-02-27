@@ -44,19 +44,28 @@ func apiVideo(w http.ResponseWriter, r *http.Request) {
 
 	host := r.Host
 	if host == "" {
-		host = "localhost:2233"
+		host = server.Addr
+		if host[0] == ':' {
+			host = "localhost" + host
+		} else if len(host) >= 7 && host[:7] == "0.0.0.0" {
+			host = "localhost" + host[7:]
+		}
 	}
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
 
-	// Build M3U8 items
 	var items []M3u8Item
+	maxDuration := 0
 	for i, page := range pages {
 		partTitle := page.Part
 		if partTitle == "" {
 			partTitle = fmt.Sprintf("P%d", i+1)
+		}
+
+		if page.Duration > maxDuration {
+			maxDuration = page.Duration
 		}
 
 		items = append(items, M3u8Item{
@@ -67,15 +76,19 @@ func apiVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := M3u8Data{
-		Title: vInfo.Title,
-		Items: items,
+		Title:       vInfo.Title,
+		MaxDuration: maxDuration,
+		Items:       items,
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.m3u8\"", id))
 
-	if err := M3u8Template.Execute(w, data); err != nil {
-		log.Error().Err(err).Msg("Failed to execute M3U8 template")
+	err := M3u8Template.Execute(w, data)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to execute M3U8 template")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }

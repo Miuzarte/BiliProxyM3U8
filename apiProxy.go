@@ -7,6 +7,7 @@ import (
 	netUrl "net/url"
 
 	"github.com/Miuzarte/biligo"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,7 +41,14 @@ func apiProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	log.Debug().
+	var event *zerolog.Event
+
+	if resp.StatusCode/100 != 2 {
+		event = log.Warn()
+	} else {
+		event = log.Debug()
+	}
+	event.
 		Int("status", resp.StatusCode).
 		Str("content-range", resp.Header.Get("Content-Range")).
 		Str("content-length", resp.Header.Get("Content-Length")).

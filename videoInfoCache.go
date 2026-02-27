@@ -66,7 +66,8 @@ func startCacheCleanup(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			cleanupExpiredCache()
-			log.Debug().Msg("Cache cleanup completed")
+			log.Trace().
+				Msg("Cache cleanup completed")
 		case <-ctx.Done():
 			return
 		}

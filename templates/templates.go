@@ -64,8 +64,9 @@ var MpdTemplate = template.Must(
 )
 
 type M3u8Data struct {
-	Title string
-	Items []M3u8Item
+	Title       string
+	MaxDuration int
+	Items       []M3u8Item
 }
 
 type M3u8Item struct {

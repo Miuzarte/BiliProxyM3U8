@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"BProxy/contextWaitGroup"
 
@@ -34,6 +37,10 @@ var (
 		"Server listen address (e.g., :2233, 127.0.0.1:8080, 0.0.0.0:80)")
 	fUseProxy = flag.Bool("proxy", true,
 		"Use HTTP_PROXY/HTTPS_PROXY environment variables, -proxy=false to disable")
+	// x509: certificate is valid for *.bilivideo.cn, bilivideo.cn,
+	// not upos-sz-mirror14b.bilivideo.com
+	fInsecure = flag.Bool("insecure", false,
+		"Skip TLS certificate verification (to avoid certificate mismatch issues)")
 
 	fLoginOnly = flag.Bool("login", false,
 		"Only perform login and exit")
@@ -46,7 +53,27 @@ var (
 
 var (
 	cwg    = contextWaitGroup.New(context.Background())
-	server http.Server
+	server = http.Server{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 0, // no timeout for streaming
+		IdleTimeout:  120 * time.Second,
+		ConnState: func(conn net.Conn, state http.ConnState) {
+			event := log.Trace().
+				Stringer("remoteAddr", conn.RemoteAddr())
+			switch state {
+			case http.StateNew:
+				event.Msg("StateNew:")
+			case http.StateActive:
+				event.Msg("StateActive:")
+			case http.StateIdle:
+				event.Msg("StateIdle:")
+			case http.StateHijacked:
+				event.Msg("StateHijacked:")
+			case http.StateClosed:
+				event.Msg("StateClosed:")
+			}
+		},
+	}
 )
 
 var (
@@ -67,8 +94,14 @@ func init() {
 	}
 
 	server.Addr = *fListen
+
+	// Configure HTTP transport
+	transport := http.DefaultTransport.(*http.Transport)
 	if !*fUseProxy {
-		http.DefaultTransport.(*http.Transport).Proxy = nil
+		transport.Proxy = nil
+	}
+	if *fInsecure {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	maxQuality = parseQuality(*fQuality)
@@ -79,6 +112,7 @@ func init() {
 		Int("maxQuality", maxQuality).
 		Ints("codecPriority", codecPriority).
 		Bool("useProxy", *fUseProxy).
+		Bool("insecure", *fInsecure).
 		Msg("Video selection preferences loaded")
 }
 
