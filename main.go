@@ -26,8 +26,14 @@ func init() {
 }
 
 var (
+	fListen = flag.String("listen", ":2233",
+		"Server listen address (e.g., :2233, 127.0.0.1:8080, 0.0.0.0:80)")
+	fUseProxy = flag.Bool("proxy", true,
+		"Use HTTP_PROXY/HTTPS_PROXY environment variables, -proxy=false to disable")
+
 	fLoginOnly = flag.Bool("login", false,
 		"Only perform login and exit")
+
 	fCodecPriority = flag.String("codec", "hevc,avc,av1",
 		"Codec priority (av1/av01, hevc/h265/h.265, avc/h264/h.264)")
 	fQuality = flag.String("quality", "1080P",
@@ -36,7 +42,7 @@ var (
 
 var (
 	cwg    = contextWaitGroup.New(context.Background())
-	server = http.Server{Addr: ":2233"}
+	server http.Server
 )
 
 var (
@@ -47,12 +53,21 @@ var (
 func init() {
 	flag.Parse()
 
+	server.Addr = *fListen
+	if !*fUseProxy {
+		if transport, ok := http.DefaultTransport.(*http.Transport); ok {
+			transport.Proxy = nil
+		}
+	}
+
 	maxQuality = parseQuality(*fQuality)
 	codecPriority = parseCodecPriority(*fCodecPriority)
 
 	log.Info().
+		Str("listen", server.Addr).
 		Int("maxQuality", maxQuality).
 		Ints("codecPriority", codecPriority).
+		Bool("useProxy", *fUseProxy).
 		Msg("Video selection preferences loaded")
 }
 

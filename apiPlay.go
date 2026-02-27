@@ -135,6 +135,7 @@ LOOP:
 	data := MpdData{
 		Title:         title,
 		OwnerName:     vInfo.Owner.Name,
+		Aid:           vInfo.Aid,
 		Bvid:          vInfo.Bvid,
 		TotalDuration: page.Duration,
 		Periods: []PeriodData{{

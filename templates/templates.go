@@ -14,6 +14,7 @@ var fs embed.FS
 type MpdData struct {
 	Title         string
 	OwnerName     string
+	Aid           int
 	Bvid          string
 	TotalDuration int
 	Periods       []PeriodData
