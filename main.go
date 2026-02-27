@@ -21,11 +21,15 @@ func init() {
 		FormatTimestamp: logFormatTimestamp,
 		FormatLevel:     logFormatLevel,
 	})
-	// zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 }
 
 var (
+	fTrace = flag.Bool("trace", false,
+		"Enable trace logging")
+	fDebug = flag.Bool("debug", false,
+		"Enable debug logging")
+
+	// [TODO] maybe using flag.StringVar(&fListen, ...)
 	fListen = flag.String("listen", ":2233",
 		"Server listen address (e.g., :2233, 127.0.0.1:8080, 0.0.0.0:80)")
 	fUseProxy = flag.Bool("proxy", true,
@@ -53,11 +57,18 @@ var (
 func init() {
 	flag.Parse()
 
+	switch {
+	case *fTrace:
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	case *fDebug:
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
 	server.Addr = *fListen
 	if !*fUseProxy {
-		if transport, ok := http.DefaultTransport.(*http.Transport); ok {
-			transport.Proxy = nil
-		}
+		http.DefaultTransport.(*http.Transport).Proxy = nil
 	}
 
 	maxQuality = parseQuality(*fQuality)
