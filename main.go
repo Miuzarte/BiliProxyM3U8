@@ -121,8 +121,9 @@ func main() {
 	defer cwg.Cancel()
 	defer stop()
 
+	// 无 query p 返回 M3U8,
+	// query p 返回 MPD
 	http.HandleFunc("GET /v1/video/{id}", apiVideo)
-	http.HandleFunc("GET /v1/play/{id}", apiPlay)
 	http.HandleFunc("GET /v1/proxy", apiProxy)
 
 	switch {
