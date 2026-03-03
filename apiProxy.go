@@ -56,6 +56,10 @@ func apiProxy(w http.ResponseWriter, r *http.Request) {
 		Msg("Proxy response")
 
 	maps.Copy(w.Header(), resp.Header)
+
+	// Add caching headers to encourage client-side caching
+	w.Header().Set("Cache-Control", "public, max-age=86400") // 24 hours
+
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 }

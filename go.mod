@@ -1,4 +1,4 @@
-module BProxy
+module github.com/Miuzarte/BiliProxyM3U8
 
 go 1.26
 

@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"BProxy/contextWaitGroup"
+	"github.com/Miuzarte/BiliProxyM3U8/contextWaitGroup"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

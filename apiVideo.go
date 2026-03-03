@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	. "BProxy/templates"
+	. "github.com/Miuzarte/BiliProxyM3U8/templates"
 
 	"github.com/Miuzarte/biligo"
 	"github.com/rs/zerolog/log"
@@ -243,8 +243,6 @@ LOOP:
 	}
 
 	w.Header().Set("Content-Type", "application/dash+xml")
-	// Cache for 5 minutes
-	// w.Header().Set("Cache-Control", "public, max-age=300")
 	err = MpdTemplate.Execute(w, data)
 	if err != nil {
 		log.Error().
